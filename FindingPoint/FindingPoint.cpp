@@ -15,7 +15,7 @@ vector<Points> PointsArray;
 vector<Points> PointDArray;
 
 double h = 3;
-float stepR = 0.1f;
+float stepR = 0.075f;
 int stepV = 360;
 float start_r = 3.1f;
 float end_r = 7.1f;
@@ -30,7 +30,7 @@ void find_direct_helicoid()
 
 	designation_variable();
 
-	for (double v = 0; v < 2 * M_PI; v += 2 * M_PI / stepV)
+	for (double v = 0; v < 5.9; v += 2 * M_PI / stepV)
 		for (double r = start_r; r < end_r; r += stepR)
 		{
 			Point p;
@@ -53,7 +53,7 @@ void pseudo_developable_helicoid()
 	cout << "Задай a: ";
 	cin >> a;
 
-	for (double v = 0; v < 2 * M_PI; v += 2 * M_PI / stepV)
+	for (double v = 0; v < 5.9; v += 2 * M_PI / stepV)
 		for (double r = start_r; r < end_r; r += stepR)
 		{
 			Point p;
@@ -77,13 +77,13 @@ void developable_helicoid()
 	cout << "Задай a: ";
 	cin >> a;
 
-	for (double v = 0; v < 2 * M_PI; v += 2 * M_PI / stepV)
+	for (double v = 0; v < 5.9; v += 2 * M_PI / stepV)
 		for (double r = start_r; r < end_r; r += stepR)
 		{
 			Point p;
 
 			const double m = sqrt(pow(a, 2) + pow(h / (2 * M_PI), 2));
-			
+
 			p.x = a * cos(v) - a / m * r * sin(v);
 			p.y = a * sin(v) + a / m * r * cos(v);
 			p.z = h / (2 * M_PI) * v + r * (h / (2 * M_PI)) / m;
@@ -107,7 +107,7 @@ void convolute_helicoid()
 	cout << "Задай y: ";
 	cin >> y;
 
-	for (double v = 0; v < 2 * M_PI; v += 2 * M_PI / stepV)
+	for (double v = 0; v < 5.9; v += 2 * M_PI / stepV)
 		for (double r = start_r; r < end_r; r += stepR)
 		{
 			Point p;
@@ -132,7 +132,7 @@ void find_oblique_helicoid()
 	cout << "Задай k: ";
 	cin >> k;
 
-	for (double v = 0; v < 2 * M_PI; v += 2 * M_PI / stepV)
+	for (double v = 0; v < 5.9; v += 2 * M_PI / stepV)
 		for (double r = start_r; r < end_r; r += stepR)
 		{
 			Point p;
@@ -200,6 +200,7 @@ void findNormalPoint()
 
 void findDPoint(Point a, Point b, Point c)
 {
+	/*
 	const Point temp1 = b - a;
 	const double t = temp1.norm();
 
@@ -245,21 +246,30 @@ void findDPoint(Point a, Point b, Point c)
 
 
 	PointDArray.emplace_back(a, b, c, d);
-	
-	//Point d;
-	//d.x = 2 * a.x - b.x + c.x;
-	//d.y = 2 * a.y - b.y + c.y;
-	//d.z = 2 * a.z - b.z + c.z;
+	*/
 
-	//PointDArray.emplace_back(a, b, c, d);
+	Point d;
+	d.x = a.x - b.x + c.x;
+	d.y = a.y - b.y + c.y;
+	d.z = a.z - b.z + c.z;
+
+	PointDArray.emplace_back(a, b, c, d);
 }
 
 void findExcessZ()
 {
 	cout << "Поиск превышения Z" << endl;
-	
+
 	vector<double> excessZ;
 
+	Points points;
+	double maxExcessZ = 0;
+	double sumExcessZ = 0;
+	
+	omp_lock_t myLock;
+	omp_init_lock(&myLock);
+	
+#pragma omp parallel for shared(PointDArray, point)
 	for (int i = 0; i < point.size(); i++)
 	{
 		for (int j = 0; j < PointDArray.size(); j++)
@@ -267,42 +277,32 @@ void findExcessZ()
 			if (round(PointDArray[j].D.x * 10) / 10 == round(point[i].x * 10) / 10)
 				if (round(PointDArray[j].D.y * 10) / 10 == round(point[i].y * 10) / 10)
 				{
+					omp_set_lock(&myLock);
+					
 					double z = round(PointDArray[j].D.z * 10) / 10 - round(point[i].z * 10) / 10;
+
+					if (maxExcessZ < z)
+					{
+						maxExcessZ = z;
+						points = PointDArray[j];
+					}
+					sumExcessZ += abs(z);
+					
 					excessZ.push_back(z);
 
-					if (z > 1.5)
-					{
-						cout << "A: " << PointDArray[j].A << endl;
-						cout << "B: " << PointDArray[j].B << endl;
-						cout << "C: " << PointDArray[j].C << endl;
-						cout << "D: " << PointDArray[j].D << endl;
-						cout << "Point: " << point[i] << endl;
-
-						cout << "Z у D: " << round(PointDArray[j].D.z * 10) / 10 << endl;
-						cout << "Z у стандартной точки: " << round(point[i].z * 10) / 10 << endl;
-						cout << "Z итоговая: " << z << endl;
-						cout << "\n";
-					}
+					omp_unset_lock(&myLock);
 				}
 		}
-
-		//cout << "Осталось " << point.size() - i + 1 << " точек" << endl;
 	}
 
-	cout << "Количество Z: " << excessZ.size() << endl;
+	cout << "\nКоличество Z: " << excessZ.size() << endl;
 
-	double maxExcessZ = 0;
-	double sumExcessZ = 0;
-
-	for (auto b : excessZ)
-	{
-		if (b > maxExcessZ)
-			maxExcessZ = b;
-
-		sumExcessZ += b;
-	}
-
-	cout << "Максимальный Z: " << maxExcessZ << endl;
+	cout << "A: " << points.A << endl;
+	cout << "B: " << points.B << endl;
+	cout << "C: " << points.C << endl;
+	cout << "D: " << points.D << endl;
+	
+	cout << "\nМаксимальный Z: " << maxExcessZ << endl;
 	cout << "Средний Z: " << sumExcessZ / excessZ.size() << endl;
 }
 
@@ -338,7 +338,7 @@ int main()
 		cout << "Режим: ";
 		cin >> mode;
 		cout << endl;
-		
+
 		switch (mode) {
 		case 1:
 
@@ -393,7 +393,7 @@ int main()
 	cout << "\nВсего точек: " << point.size() << endl;
 
 	findNormalPoint();
-	cout << "Пар: " << PointsArray.size() << endl;
+	cout << "\nПар: " << PointsArray.size() << endl;
 
 
 	if (!PointsArray.empty())
