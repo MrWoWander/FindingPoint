@@ -17,8 +17,8 @@ struct Point
 	friend Point operator*(const Point& a, double d);
 	friend Point operator/(const Point& a, double d);
 
-	double norm();
-	double scalar_product(const Point& b);
+	double norm() const;
+	double scalar_product(const Point& b) const;
 	static Point cross(const Point& a, const Point& b);
 };
 

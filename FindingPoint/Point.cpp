@@ -3,12 +3,12 @@
 
 using namespace std;
 
-double Point::norm()
+double Point::norm() const
 {
 	return sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
 }
 
-double Point::scalar_product(const Point& b)
+double Point::scalar_product(const Point& b) const
 {
 	return x * b.x + y * b.y + z * b.z;
 }
