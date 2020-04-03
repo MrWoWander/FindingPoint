@@ -15,7 +15,7 @@ vector<Points> PointsArray;
 vector<Points> PointDArray;
 
 double h = 3;
-float stepR = 0.075f;
+float stepR = 0.05f;
 int stepV = 360;
 float start_r = 3.1f;
 float end_r = 7.1f;
@@ -144,7 +144,6 @@ void find_oblique_helicoid()
 		}
 }
 
-const int quality = 10;
 
 void findNormalPoint()
 {
@@ -155,6 +154,9 @@ void findNormalPoint()
 
 	int count = 0;
 
+	const int quality = 10;
+
+	
 #pragma omp parallel for shared(point, PointsArray, count)
 	for (int i = 0; i < point.size() - 1; i++)
 	{
@@ -263,30 +265,50 @@ void findExcessZ()
 	vector<double> excessZ;
 
 	Points points;
-	double maxExcessZ = 0;
+	double maxExcessZ = -1;
 	double sumExcessZ = 0;
+
+	float maxZ = 0;
+
+	cout << "Больше какого Z выводить точки: ";
+	cin >> maxZ;
+
+	const int quality = 100;
 	
 	omp_lock_t myLock;
 	omp_init_lock(&myLock);
 	
-#pragma omp parallel for shared(PointDArray, point)
+#pragma omp parallel for shared(PointDArray, point, maxZ)
 	for (int i = 0; i < point.size(); i++)
 	{
 		for (int j = 0; j < PointDArray.size(); j++)
 		{
-			if (round(PointDArray[j].D.x * 10) / 10 == round(point[i].x * 10) / 10)
-				if (round(PointDArray[j].D.y * 10) / 10 == round(point[i].y * 10) / 10)
+			if (round(PointDArray[j].D.x * quality) / quality == round(point[i].x * quality) / quality)
+				if (round(PointDArray[j].D.y * quality) / quality == round(point[i].y * quality) / quality)
 				{
 					omp_set_lock(&myLock);
 					
-					double z = round(PointDArray[j].D.z * 10) / 10 - round(point[i].z * 10) / 10;
+					double z = PointDArray[j].D.z -point[i].z;
 
-					if (maxExcessZ < z)
+					if (abs(z) > maxZ)
 					{
-						maxExcessZ = z;
+						cout << "A: " << PointDArray[j].A << endl;
+						cout << "B: " << PointDArray[j].B << endl;
+						cout << "C: " << PointDArray[j].C << endl;
+						cout << "D: " << PointDArray[j].D << endl;
+
+						cout << "Point: " << point[i] << endl;
+
+						cout << "Z: " << z << endl;
+					}
+					
+					if (maxExcessZ < abs(z))
+					{
+						maxExcessZ = abs(z);
 						points = PointDArray[j];
 					}
 					sumExcessZ += abs(z);
+
 					
 					excessZ.push_back(z);
 
@@ -302,7 +324,7 @@ void findExcessZ()
 	cout << "C: " << points.C << endl;
 	cout << "D: " << points.D << endl;
 	
-	cout << "\nМаксимальный Z: " << maxExcessZ << endl;
+	cout << "\nМаксимальный Z по модулю: " << maxExcessZ << endl;
 	cout << "Средний Z: " << sumExcessZ / excessZ.size() << endl;
 }
 
